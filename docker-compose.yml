@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile.backend
     container_name: email-editor-backend
     ports:
-      - "5000:5000"
+      - "5001:5000"
     volumes:
       - ./emailtemplates:/app/emailtemplates
     environment:

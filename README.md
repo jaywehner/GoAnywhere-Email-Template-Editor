@@ -53,7 +53,24 @@ docker-compose down
 When using Docker:
 - The application will be available at http://localhost
 - The backend API will be available at http://localhost/api
+- The backend service is also directly accessible at http://localhost:5001
 - Any changes to the email templates will be reflected immediately as the templates directory is mounted as a volume
+
+### Port Configuration
+
+If you encounter port conflicts, you can modify the port mappings in the `docker-compose.yml` file:
+
+```yaml
+# For frontend port conflict (default 80)
+frontend:
+  ports:
+    - "8080:80"  # Change 8080 to your preferred port
+
+# For backend port conflict (default 5001)
+backend:
+  ports:
+    - "5002:5000"  # Change 5002 to your preferred port
+```
 
 ## Usage
 
