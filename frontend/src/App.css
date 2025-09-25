@@ -1,0 +1,241 @@
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: var(--secondary);
+  color: var(--white);
+  gap: 10px;
+  z-index: 10;
+}
+
+.resize-handle {
+  width: 8px;
+  background: var(--mid-gray);
+  opacity: 0.2;
+  transition: opacity 0.2s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.resize-handle:hover {
+  opacity: 0.4;
+}
+
+.resize-handle::after {
+  content: '';
+  width: 4px;
+  height: 24px;
+  background-color: var(--dark-gray);
+  border-radius: 2px;
+}
+
+.html-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 8px;
+  background-color: var(--light-gray);
+  border-bottom: 1px solid var(--mid-gray);
+  gap: 2px;
+}
+
+.tool-group {
+  display: flex;
+  margin-right: 10px;
+  border-right: 1px solid var(--mid-gray);
+  padding-right: 10px;
+}
+
+.tool-group:last-child {
+  border-right: none;
+}
+
+.html-tools button {
+  background: var(--white);
+  color: var(--secondary);
+  border: 1px solid var(--mid-gray);
+  padding: 6px 8px;
+  font-size: 12px;
+  min-width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.html-tools button:hover {
+  background: var(--primary);
+  color: var(--white);
+}
+
+.toolbar h1 {
+  font-size: 18px;
+  margin-right: auto;
+}
+
+.editor-container {
+  flex-grow: 1;
+  position: relative;
+  height: calc(100% - 96px);
+  overflow: hidden;
+}
+
+/* Important styles for react-resizable-panels */
+.code-editor-container {
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--secondary);
+}
+
+.preview-container {
+  height: 100%;
+  overflow: auto;
+  background-color: var(--white);
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.preview-controls {
+  display: flex;
+  padding: 8px;
+  background-color: var(--light-gray);
+  border-bottom: 1px solid var(--mid-gray);
+}
+
+.preview-controls button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background-color: var(--primary);
+  color: var(--white);
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.preview-controls button:hover {
+  background-color: var(--primary-dark);
+}
+
+.preview-wrapper iframe {
+  flex: 1;
+  border: none;
+}
+
+.preview-container iframe {
+  border: none;
+  background: white;
+}
+
+.template-selector-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.template-selector {
+  background-color: var(--white);
+  border-radius: 4px;
+  padding: 20px;
+  width: 80%;
+  max-width: 800px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.template-selector h2 {
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.template-selector h2 button {
+  background: transparent;
+  color: var(--dark-gray);
+  font-size: 20px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.template-selector h2 button:hover {
+  color: var(--secondary);
+}
+
+.template-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.template-category {
+  margin-bottom: 15px;
+}
+
+.category-header {
+  font-weight: bold;
+  margin-bottom: 5px;
+  padding: 5px;
+  background-color: var(--light-gray);
+}
+
+.template-item {
+  padding: 8px 15px;
+  border-bottom: 1px solid var(--mid-gray);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.template-item:hover {
+  background-color: var(--light-gray);
+}
+
+.loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100px;
+}
+
+.loader:after {
+  content: " ";
+  display: block;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 6px solid var(--primary);
+  border-color: var(--primary) transparent var(--primary) transparent;
+  animation: loader 1.2s linear infinite;
+}
+
+@keyframes loader {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
