@@ -22,7 +22,7 @@ services:
       dockerfile: Dockerfile.frontend
     container_name: email-editor-frontend
     ports:
-      - "80:80"
+      - "8100:80"
     depends_on:
       - backend
     networks:

@@ -47,6 +47,91 @@
   gap: 2px;
 }
 
+.variable-selector {
+  position: relative;
+  margin-left: 10px;
+}
+
+.variable-selector button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background-color: var(--secondary);
+  color: var(--white);
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.variable-selector button:hover,
+.variable-selector button.active {
+  background-color: var(--primary);
+}
+
+.variable-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 300px;
+  max-height: 400px;
+  background-color: var(--white);
+  border: 1px solid var(--mid-gray);
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.variable-search {
+  padding: 8px;
+  border-bottom: 1px solid var(--mid-gray);
+}
+
+.variable-search input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--mid-gray);
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.variable-list {
+  overflow-y: auto;
+  max-height: 340px;
+}
+
+.variable-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--light-gray);
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.variable-item:hover {
+  background-color: var(--light-gray);
+}
+
+.variable-loading,
+.variable-error,
+.variable-empty {
+  padding: 12px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--dark-gray);
+}
+
+.variable-error {
+  color: var(--error);
+}
+
 .tool-group {
   display: flex;
   margin-right: 10px;

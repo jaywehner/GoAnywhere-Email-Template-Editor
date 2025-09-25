@@ -8,6 +8,7 @@ A web application that allows editing HTML files with live preview functionality
 - Real-time preview of HTML content
 - Open and edit existing HTML files
 - Select from available email templates in the emailtemplates directory
+- Insert HTML variables from a dropdown list
 - Save/download edited HTML files
 
 ## Setup
@@ -91,6 +92,24 @@ backend:
 - Backend: Python with Flask
 - Frontend: Node.js with React
 - Editor: Monaco Editor (VS Code's editor)
+
+## HTML Variables
+
+The editor supports inserting predefined HTML variables into your templates. These variables are read from the `htmlvariables/varlist.txt` file and can be inserted using the Variables dropdown in the editor toolbar.
+
+### Using Variables
+
+1. Click on the "Variables" button in the toolbar
+2. Search for a specific variable (optional)
+3. Click on a variable to insert it at the current cursor position
+
+### Adding Custom Variables
+
+To add custom variables to the dropdown:
+
+1. Edit the `htmlvariables/varlist.txt` file
+2. Add one variable per line
+3. Restart the application or refresh the page
 
 ## Git Repository
 

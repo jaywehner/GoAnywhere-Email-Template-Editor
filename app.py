@@ -2,12 +2,14 @@ import os
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import xml.etree.ElementTree as ET
+import json
 
 app = Flask(__name__, static_folder='frontend/dist')
 CORS(app)
 
-# Path to email templates
+# Path to email templates and html variables
 EMAIL_TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'emailtemplates')
+HTML_VARIABLES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'htmlvariables', 'varlist.txt')
 
 @app.route('/')
 def index():
@@ -81,6 +83,19 @@ def open_file():
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
         return jsonify({'content': content})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/html-variables')
+def get_html_variables():
+    """Get the list of available HTML variables"""
+    try:
+        if os.path.exists(HTML_VARIABLES_PATH):
+            with open(HTML_VARIABLES_PATH, 'r', encoding='utf-8') as f:
+                variables = [line.strip() for line in f if line.strip()]
+            return jsonify(variables)
+        else:
+            return jsonify({'error': 'Variables file not found'}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

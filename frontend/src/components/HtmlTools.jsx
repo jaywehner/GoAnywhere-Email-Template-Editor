@@ -16,6 +16,7 @@ import {
   FaPalette,
   FaFont
 } from 'react-icons/fa';
+import VariableSelector from './VariableSelector';
 
 const HtmlTools = ({ editorInstance }) => {
   const insertHtml = (opening, closing = '') => {
@@ -174,9 +175,16 @@ const HtmlTools = ({ editorInstance }) => {
       </div>
       
       <div className="tool-group">
-        <button title="Insert Link" onClick={insertLink}>
-          <FaLink />
+        <button title="Insert Table" onClick={insertTable}>
+          <FaTable />
         </button>
+      </div>
+      
+      <div className="tool-group">
+        <VariableSelector editorInstance={editorInstance} />
+      </div>
+      
+      <div className="tool-group">
         <button title="Insert Image" onClick={insertImage}>
           <FaImage />
         </button>
