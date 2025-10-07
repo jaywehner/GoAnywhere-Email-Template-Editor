@@ -7,7 +7,9 @@ COPY frontend/package*.json ./
 RUN npm install --legacy-peer-deps
 
 # Copy the rest of the application code
-COPY frontend/ ./
+COPY frontend/vite.config.js ./
+COPY frontend/index.html ./
+COPY frontend/src ./src/
 
 # Build the application
 RUN npm run build
