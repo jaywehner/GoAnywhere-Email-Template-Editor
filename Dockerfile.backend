@@ -14,5 +14,5 @@ COPY htmlvariables/ ./htmlvariables/
 # Make port 5000 available
 EXPOSE 5000
 
-# Run the application
-CMD ["python", "app.py"]
+# Run the application with Gunicorn
+CMD ["gunicorn", "--workers", "4", "--bind", "0.0.0.0:5000", "app:app"]

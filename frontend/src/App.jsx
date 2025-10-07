@@ -112,33 +112,11 @@ function App() {
     setPreviewKey(prevKey => prevKey + 1);
   };
   
-  const handleSaveAsFile = async (filePath) => {
-    try {
-      setLoading(true);
-      const response = await axios.post('/api/save-file', {
-        filePath: filePath,
-        content: htmlContent
-      });
-      
-      if (response.data.success) {
-        setError('');
-        alert(`File successfully saved to: ${filePath}`);
-      } else {
-        setError('Failed to save file: ' + (response.data.error || 'Unknown error'));
-      }
-    } catch (err) {
-      setError('Failed to save file: ' + (err.response?.data?.error || err.message));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="app-container">
       <Toolbar 
         onOpenFile={handleOpenFile}
         onSaveFile={handleSaveFile}
-        onSaveAsFile={handleSaveAsFile}
         onOpenTemplates={() => setShowTemplateSelector(true)}
       />
       

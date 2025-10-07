@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { FaFile, FaFolderOpen, FaSave, FaFileCode, FaDownload } from 'react-icons/fa';
 
-const Toolbar = ({ onOpenFile, onSaveFile, onSaveAsFile, onOpenTemplates }) => {
+const Toolbar = ({ onOpenFile, onSaveFile, onOpenTemplates }) => {
   const fileInputRef = useRef(null);
 
   const handleFileSelect = () => {
@@ -23,31 +23,6 @@ const Toolbar = ({ onOpenFile, onSaveFile, onSaveAsFile, onOpenTemplates }) => {
       
       <button onClick={() => onSaveFile()}>
         <FaDownload /> Download
-      </button>
-      
-      <button onClick={() => {
-        // Create a hidden input element of type 'file'
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.html,.htm';
-        input.style.display = 'none';
-        input.setAttribute('nwsaveas', 'template.html');
-        
-        // Add a change event listener to handle the selected file
-        input.addEventListener('change', (e) => {
-          const filePath = e.target.value;
-          if (filePath) {
-            // Call the save as function with the selected path
-            onSaveAsFile(filePath);
-          }
-        });
-        
-        // Append to the body, trigger click and then remove
-        document.body.appendChild(input);
-        input.click();
-        document.body.removeChild(input);
-      }}>
-        <FaSave /> Save As
       </button>
       
       <button onClick={handleFileSelect}>

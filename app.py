@@ -49,15 +49,16 @@ def list_templates():
 def get_template(template_path):
     """Get a specific email template by path"""
     try:
-        # Normalize the path to prevent directory traversal
-        full_path = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), template_path))
+        # Securely join the base directory with the requested template path
+        base_dir = os.path.abspath(EMAIL_TEMPLATES_DIR)
+        requested_path = os.path.normpath(os.path.join(base_dir, template_path))
         
-        # Make sure the file is within the emailtemplates directory
-        if not full_path.startswith(EMAIL_TEMPLATES_DIR):
+        # Check for path traversal attempts
+        if os.path.commonprefix([requested_path, base_dir]) != base_dir:
             return jsonify({'error': 'Invalid template path'}), 400
         
         # Read the XML file
-        tree = ET.parse(full_path)
+        tree = ET.parse(requested_path)
         root = tree.getroot()
         
         # Extract the HTML content from the message CDATA section
@@ -67,22 +68,6 @@ def get_template(template_path):
             return jsonify({'content': html_content})
         
         return jsonify({'error': 'No HTML content found'}), 404
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/open-file', methods=['POST'])
-def open_file():
-    """Open a file from a local path"""
-    data = request.json
-    file_path = data.get('filePath')
-    
-    if not file_path:
-        return jsonify({'error': 'No file path provided'}), 400
-    
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-        return jsonify({'content': content})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -99,37 +84,10 @@ def get_html_variables():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/save-file', methods=['POST'])
-def save_file():
-    """Save HTML content to a specific file path"""
-    data = request.json
-    file_path = data.get('filePath')
-    content = data.get('content')
-    
-    if not file_path:
-        return jsonify({'error': 'No file path provided'}), 400
-    
-    if content is None:
-        return jsonify({'error': 'No content provided'}), 400
-    
-    try:
-        # Normalize the path to prevent directory traversal
-        file_path = os.path.normpath(os.path.abspath(file_path))
-        
-        # Create directories if they don't exist
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        
-        with open(file_path, 'w', encoding='utf-8') as f:
-            f.write(content)
-        
-        return jsonify({'success': True, 'message': f'File saved to {file_path}'})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 # Serve static files from the frontend build directory
 @app.route('/<path:path>')
 def serve_static(path):
     return send_from_directory(app.static_folder, path)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True)
+    app.run(host='0.0.0.0')
