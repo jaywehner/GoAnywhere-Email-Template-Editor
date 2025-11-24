@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
   FaBold,
   FaItalic,
@@ -18,7 +18,9 @@ import {
 } from 'react-icons/fa';
 import VariableSelector from './VariableSelector';
 
-const HtmlTools = ({ editorInstance }) => {
+const HtmlTools = ({ editorInstance, mainColor = '#4a87b5', onMainColorChange }) => {
+  const textColorInputRef = useRef(null);
+  const [isFontMenuOpen, setIsFontMenuOpen] = useState(false);
   const insertHtml = (opening, closing = '') => {
     if (!editorInstance) return;
     
@@ -105,17 +107,55 @@ const HtmlTools = ({ editorInstance }) => {
     insertHtml(tableHtml);
   };
 
-  const setTextColor = () => {
-    const color = prompt('Enter color (name, hex, rgb, etc.):', '#333333');
-    if (color !== null) {
+  const handleTextColorChange = (event) => {
+    const color = event.target.value;
+    if (color) {
       insertHtml(`<span style="color: ${color}">`, '</span>');
     }
   };
 
-  const setFontFamily = () => {
-    const font = prompt('Enter font family:', 'Arial, sans-serif');
-    if (font !== null) {
-      insertHtml(`<span style="font-family: ${font}">`, '</span>');
+  const commonFonts = [
+    'Arial, sans-serif',
+    'Helvetica, sans-serif',
+    'Tahoma, sans-serif',
+    'Verdana, sans-serif',
+    'Trebuchet MS, sans-serif',
+    'Georgia, serif',
+    'Times New Roman, serif',
+    'Garamond, serif',
+    'Courier New, monospace',
+    'Lucida Console, monospace',
+    'Palatino Linotype, serif',
+    'Segoe UI, sans-serif',
+    'Roboto, sans-serif',
+    'Open Sans, sans-serif',
+    'Impact, sans-serif'
+  ];
+
+  const applyFontFamily = (font) => {
+    if (!font) return;
+    insertHtml(`<span style="font-family: ${font}">`, '</span>');
+    setIsFontMenuOpen(false);
+  };
+
+  const handleMainColorChange = (event) => {
+    const newColor = event.target.value;
+    if (!newColor || newColor === mainColor) {
+      return;
+    }
+
+    if (editorInstance) {
+      const model = editorInstance.getModel();
+      if (model) {
+        const currentValue = model.getValue();
+        // Replace all occurrences of the current main color with the new color
+        const updatedValue = currentValue.split(mainColor).join(newColor);
+        model.setValue(updatedValue);
+      }
+    }
+
+    if (onMainColorChange) {
+      onMainColorChange(newColor);
     }
   };
 
@@ -151,12 +191,55 @@ const HtmlTools = ({ editorInstance }) => {
       </div>
       
       <div className="tool-group">
-        <button title="Text Color" onClick={setTextColor}>
+        <button
+          title="Text Color"
+          onClick={() => {
+            if (textColorInputRef.current) {
+              textColorInputRef.current.click();
+            }
+          }}
+        >
           <FaPalette />
         </button>
-        <button title="Font Family" onClick={setFontFamily}>
-          <FaFont />
-        </button>
+        <input
+          type="color"
+          ref={textColorInputRef}
+          style={{ display: 'none' }}
+          onChange={handleTextColorChange}
+        />
+        <div className="font-family-wrapper">
+          <button
+            title="Font Family"
+            onClick={() => setIsFontMenuOpen((open) => !open)}
+          >
+            <FaFont />
+          </button>
+          {isFontMenuOpen && (
+            <div className="font-menu">
+              {commonFonts.map((font) => (
+                <button
+                  key={font}
+                  type="button"
+                  className="font-menu-item"
+                  onClick={() => applyFontFamily(font)}
+                  style={{ fontFamily: font }}
+                >
+                  {font.split(',')[0]}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="tool-group main-color-group">
+        <span className="main-color-label">Main Color</span>
+        <input
+          type="color"
+          className="main-color-picker"
+          value={mainColor}
+          onChange={handleMainColorChange}
+        />
       </div>
       
       <div className="tool-group">
@@ -196,9 +279,6 @@ const HtmlTools = ({ editorInstance }) => {
         </button>
         <button title="Ordered List" onClick={() => insertHtml('<ol>\n  <li>Item 1</li>\n  <li>Item 2</li>\n  <li>Item 3</li>\n</ol>')}>
           <FaListOl />
-        </button>
-        <button title="Insert Table" onClick={insertTable}>
-          <FaTable />
         </button>
       </div>
     </div>

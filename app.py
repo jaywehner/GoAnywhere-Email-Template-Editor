@@ -20,26 +20,28 @@ def list_templates():
     """List all available email templates"""
     templates = []
     
-    # Get templates from the main directory
+    # Get templates from the main directory (paths relative to EMAIL_TEMPLATES_DIR)
     for filename in os.listdir(EMAIL_TEMPLATES_DIR):
         filepath = os.path.join(EMAIL_TEMPLATES_DIR, filename)
         if os.path.isfile(filepath) and filename.endswith('.xml'):
             templates.append({
                 'name': filename,
-                'path': os.path.join('emailtemplates', filename),
+                'path': filename,  # e.g. "AgentDisconnectedAlert.xml"
                 'category': 'main'
             })
-    
-    # Get templates from subdirectories
+
+    # Get templates from subdirectories (relative paths with forward slashes)
     for dirname in os.listdir(EMAIL_TEMPLATES_DIR):
         subdir_path = os.path.join(EMAIL_TEMPLATES_DIR, dirname)
         if os.path.isdir(subdir_path):
             for filename in os.listdir(subdir_path):
                 filepath = os.path.join(subdir_path, filename)
                 if os.path.isfile(filepath) and filename.endswith('.xml'):
+                    # Build a URL-style relative path like "Subdir/Template.xml"
+                    rel_path = f"{dirname}/{filename}"
                     templates.append({
                         'name': filename,
-                        'path': os.path.join('emailtemplates', dirname, filename),
+                        'path': rel_path,
                         'category': dirname
                     })
     
@@ -49,26 +51,27 @@ def list_templates():
 def get_template(template_path):
     """Get a specific email template by path"""
     try:
-        # Normalize the path to prevent directory traversal
-        full_path = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), template_path))
-        
-        # Make sure the file is within the emailtemplates directory
-        if not full_path.startswith(EMAIL_TEMPLATES_DIR):
+        # Clean the path and ensure it's relative to the templates directory
+        template_path = os.path.normpath(template_path)
+        if '..' in template_path.split(os.sep):
             return jsonify({'error': 'Invalid template path'}), 400
-        
-        # Read the XML file
-        tree = ET.parse(full_path)
-        root = tree.getroot()
-        
-        # Extract the HTML content from the message CDATA section
-        message_element = root.find('message')
-        if message_element is not None and message_element.text:
-            html_content = message_element.text
-            return jsonify({'content': html_content})
-        
-        return jsonify({'error': 'No HTML content found'}), 404
+
+        # Build the full path to the template (relative to EMAIL_TEMPLATES_DIR)
+        full_path = os.path.join(EMAIL_TEMPLATES_DIR, template_path)
+
+        # Verify the file exists
+        if not os.path.exists(full_path) or not os.path.isfile(full_path):
+            return jsonify({'error': 'Template not found', 'path': full_path}), 404
+
+        # Read and return the full file content; frontend will extract <message> HTML
+        with open(full_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        return jsonify({'content': content})
+
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error(f'Error loading template: {str(e)}')
+        return jsonify({'error': f'Failed to load template: {str(e)}'}), 500
 
 @app.route('/api/open-file', methods=['POST'])
 def open_file():

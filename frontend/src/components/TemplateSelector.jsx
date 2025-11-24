@@ -44,7 +44,7 @@ const TemplateSelector = ({ templates, loading, onSelect, onClose }) => {
                     <div
                       key={index}
                       className="template-item"
-                      onClick={() => onSelect(template.path)}
+                      onClick={() => onSelect(template)}
                     >
                       {template.name}
                     </div>

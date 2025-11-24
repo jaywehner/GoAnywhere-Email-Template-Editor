@@ -18,8 +18,9 @@ function App() {
     minimap: { enabled: false },
     automaticLayout: true,
     wordWrap: 'on',
-    scrollBeyondLastLine: false,
-    fontSize: 14
+    scrollBeyondLastLine: true,
+    fontSize: 14,
+    padding: { top: 8, bottom: 20 }
   });
   
   const editorRef = useRef(null);
@@ -34,6 +35,10 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [previewKey, setPreviewKey] = useState(0); // Used to force iframe refresh
+  const [currentTemplate, setCurrentTemplate] = useState(null);
+  const [originalContent, setOriginalContent] = useState('');
+  const [isTemplateLoaded, setIsTemplateLoaded] = useState(false);
+  const [mainColor, setMainColor] = useState('#4a87b5');
 
   // Fetch templates on component mount
   useEffect(() => {
@@ -57,14 +62,29 @@ function App() {
     setHtmlContent(value);
   };
 
-  const handleTemplateSelect = async (templatePath) => {
+  const handleTemplateSelect = async (template) => {
     try {
       setLoading(true);
-      const response = await axios.get(`/api/template/${templatePath}`);
       
+      // Safely get the template path (supports either template object or string path)
+      const templatePath = typeof template === 'string' ? template : (template?.path || '');
+      if (!templatePath) {
+        throw new Error('No template path provided');
+      }
+
+      // Backend returns full XML content; we'll extract the <message> HTML here
+      const response = await axios.get(`/api/template/${encodeURIComponent(templatePath)}`);
+
       if (response.data.content) {
-        setHtmlContent(response.data.content);
+        const fullContent = response.data.content;
+        // Store the full XML for saving later
+        setOriginalContent(fullContent);
+        // Extract just the HTML inside <message> for editing
+        setHtmlContent(extractHtmlFromTemplate(fullContent));
+        setCurrentTemplate(template);
+        setIsTemplateLoaded(true);
         setShowTemplateSelector(false);
+        setError('');
       } else {
         setError('Selected template has no content');
       }
@@ -83,7 +103,19 @@ function App() {
       
       reader.onload = (e) => {
         const content = e.target.result;
-        setHtmlContent(content);
+
+        // Treat opened file as a template:
+        // - keep full content for saving
+        // - extract just the <message> HTML for editing
+        setOriginalContent(content);
+        setHtmlContent(extractHtmlFromTemplate(content));
+        setCurrentTemplate({
+          name: file.name || 'opened-template.xml',
+          path: null,
+          category: 'opened'
+        });
+        setIsTemplateLoaded(true);
+        setError('');
       };
       
       reader.readAsText(file);
@@ -92,13 +124,37 @@ function App() {
     }
   };
 
+  // Extract HTML content from between <message> tags
+  const extractHtmlFromTemplate = (content) => {
+    const messageMatch = content.match(/<message[^>]*>([\s\S]*?)<\/message>/i);
+    return messageMatch ? messageMatch[1].trim() : content;
+  };
+
+  // Rebuild the full XML with updated HTML content
+  const rebuildTemplate = (html) => {
+    if (!currentTemplate) return html;
+    return originalContent.replace(
+      /(<message[^>]*>)[\s\S]*?(<\/message>)/i, 
+      `$1\n${html}\n$2`
+    );
+  };
+
   const handleSaveFile = () => {
-    const blob = new Blob([htmlContent], { type: 'text/html' });
+    if (!isTemplateLoaded) {
+      setError('Please load a template before saving');
+      return;
+    }
+    
+    const fullContent = rebuildTemplate(htmlContent);
+    // Use the template name as-is if available (it already includes .xml)
+    const fileName = currentTemplate ? currentTemplate.name : 'template.xml';
+    
+    const blob = new Blob([fullContent], { type: 'application/xml' });
     const url = URL.createObjectURL(blob);
     
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'email-template.html';
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     
@@ -113,16 +169,24 @@ function App() {
   };
   
   const handleSaveAsFile = async (filePath) => {
+    if (!isTemplateLoaded) {
+      setError('Please load a template before saving');
+      return;
+    }
+    
     try {
       setLoading(true);
+      const fullContent = rebuildTemplate(htmlContent);
+      const fileName = filePath.endsWith('.xml') ? filePath : `${filePath}.xml`;
+      
       const response = await axios.post('/api/save-file', {
-        filePath: filePath,
-        content: htmlContent
+        filePath: fileName,
+        content: fullContent
       });
       
       if (response.data.success) {
         setError('');
-        alert(`File successfully saved to: ${filePath}`);
+        alert(`File successfully saved to: ${fileName}`);
       } else {
         setError('Failed to save file: ' + (response.data.error || 'Unknown error'));
       }
@@ -134,21 +198,39 @@ function App() {
   };
 
   return (
-    <div className="app-container">
-      <Toolbar 
-        onOpenFile={handleOpenFile}
-        onSaveFile={handleSaveFile}
-        onSaveAsFile={handleSaveAsFile}
-        onOpenTemplates={() => setShowTemplateSelector(true)}
-      />
+    <div className="app">
+      <div className="status-bar">
+        {currentTemplate ? (
+          <div className="template-status">
+            <span className="status-label">Template:</span>
+            <span className="template-name">{currentTemplate.name}</span>
+          </div>
+        ) : (
+          <div className="template-status warning">
+            <span className="status-label">Status:</span>
+            <span>No template loaded. Please select a template to begin.</span>
+          </div>
+        )}
+      </div>
       
-      <HtmlTools editorInstance={editorRef.current} />
+      <Toolbar 
+        onOpenFile={handleOpenFile} 
+        onSaveFile={handleSaveFile}
+        onOpenTemplates={() => setShowTemplateSelector(true)}
+        isTemplateLoaded={isTemplateLoaded}
+      />
       
       {error && <div className="error-message">{error}</div>}
       
       <div className="editor-container">
         <PanelGroup direction="horizontal">
           <Panel minSize={30} defaultSize={50} className="code-editor-container">
+            {/* HTML editing toolbar (bold, lists, variables, etc.) */}
+            <HtmlTools 
+              editorInstance={editorRef.current} 
+              mainColor={mainColor}
+              onMainColorChange={setMainColor}
+            />
             <Editor
               height="100%"
               defaultLanguage="html"
@@ -175,6 +257,10 @@ function App() {
           </Panel>
         </PanelGroup>
       </div>
+
+      <footer className="app-footer">
+        This application is not provided or supported by Fortra. Please use at your own risk. Copyright 2025 Frozen Zombies
+      </footer>
       
       {showTemplateSelector && (
         <TemplateSelector
