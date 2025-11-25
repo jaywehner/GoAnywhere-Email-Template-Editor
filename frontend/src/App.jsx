@@ -127,15 +127,27 @@ function App() {
   // Extract HTML content from between <message> tags
   const extractHtmlFromTemplate = (content) => {
     const messageMatch = content.match(/<message[^>]*>([\s\S]*?)<\/message>/i);
-    return messageMatch ? messageMatch[1].trim() : content;
+    if (!messageMatch) return content;
+    let inner = messageMatch[1].trim();
+    // If the message body is wrapped in CDATA, strip the markers for the HTML editor
+    if (/^<!\[CDATA\[/i.test(inner) && /]]>$/.test(inner)) {
+      inner = inner
+        .replace(/^<!\[CDATA\[[\r\n]*/i, '')
+        .replace(/[\r\n]*]]>$/i, '');
+    }
+    return inner.trim();
   };
 
   // Rebuild the full XML with updated HTML content
   const rebuildTemplate = (html) => {
     if (!currentTemplate) return html;
+    const hasCdata = /<message[^>]*>[\s\r\n]*<!\[CDATA\[/i.test(originalContent);
+    const replacementInner = hasCdata
+      ? `<![CDATA[\n${html}\n]]>`
+      : `\n${html}\n`;
     return originalContent.replace(
-      /(<message[^>]*>)[\s\S]*?(<\/message>)/i, 
-      `$1\n${html}\n$2`
+      /(<message[^>]*>)[\s\S]*?(<\/message>)/i,
+      `$1${replacementInner}$2`
     );
   };
 
