@@ -3,13 +3,72 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import xml.etree.ElementTree as ET
 import json
+from werkzeug.security import safe_join
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__, static_folder='frontend/dist')
 CORS(app)
 
 # Path to email templates and html variables
-EMAIL_TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'emailtemplates')
-HTML_VARIABLES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'htmlvariables', 'varlist.txt')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+EMAIL_TEMPLATES_DIR = os.path.join(BASE_DIR, 'emailtemplates')
+HTML_VARIABLES_PATH = os.path.join(BASE_DIR, 'htmlvariables', 'varlist.txt')
+EDITABLE_FILES_DIR = os.path.abspath(os.getenv('EDITABLE_FILES_DIR', EMAIL_TEMPLATES_DIR))
+
+
+def _authorize_sensitive_endpoint():
+    """Optional API-key authorization for file access endpoints."""
+    expected_api_key = os.getenv('EDITOR_API_KEY')
+    if not expected_api_key:
+        return None
+
+    provided_api_key = request.headers.get('X-API-Key')
+    if provided_api_key != expected_api_key:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    return None
+
+
+def _sanitize_relative_path(user_path):
+    """Validate and sanitize a user-supplied relative path."""
+    if not isinstance(user_path, str):
+        raise ValueError('Path must be a string')
+
+    normalized = user_path.replace('\\', '/').strip()
+    if not normalized or normalized.startswith('/'):
+        raise ValueError('Path must be relative')
+
+    parts = [part for part in normalized.split('/') if part not in ('', '.')]
+    if not parts:
+        raise ValueError('Invalid path')
+
+    sanitized_parts = []
+    for part in parts:
+        if part == '..':
+            raise ValueError('Path traversal is not allowed')
+
+        sanitized_part = secure_filename(part)
+        if not sanitized_part or sanitized_part != part:
+            raise ValueError('Invalid path segment')
+
+        sanitized_parts.append(sanitized_part)
+
+    return '/'.join(sanitized_parts)
+
+
+def _resolve_user_path(base_dir, user_path):
+    """Resolve a validated user path under a fixed base directory."""
+    safe_relative_path = _sanitize_relative_path(user_path)
+    base_abs = os.path.abspath(base_dir)
+    resolved_path = safe_join(base_abs, safe_relative_path)
+    if not resolved_path:
+        raise ValueError('Invalid path')
+
+    resolved_abs = os.path.abspath(resolved_path)
+    if os.path.commonpath([base_abs, resolved_abs]) != base_abs:
+        raise ValueError('Path traversal is not allowed')
+
+    return resolved_abs
 
 @app.route('/')
 def index():
@@ -50,18 +109,16 @@ def list_templates():
 @app.route('/api/template/<path:template_path>')
 def get_template(template_path):
     """Get a specific email template by path"""
-    try:
-        # Clean the path and ensure it's relative to the templates directory
-        template_path = os.path.normpath(template_path)
-        if '..' in template_path.split(os.sep):
-            return jsonify({'error': 'Invalid template path'}), 400
+    auth_error = _authorize_sensitive_endpoint()
+    if auth_error:
+        return auth_error
 
-        # Build the full path to the template (relative to EMAIL_TEMPLATES_DIR)
-        full_path = os.path.join(EMAIL_TEMPLATES_DIR, template_path)
+    try:
+        full_path = _resolve_user_path(EMAIL_TEMPLATES_DIR, template_path)
 
         # Verify the file exists
         if not os.path.exists(full_path) or not os.path.isfile(full_path):
-            return jsonify({'error': 'Template not found', 'path': full_path}), 404
+            return jsonify({'error': 'Template not found'}), 404
 
         # Read and return the full file content; frontend will extract <message> HTML
         with open(full_path, 'r', encoding='utf-8') as f:
@@ -69,6 +126,8 @@ def get_template(template_path):
 
         return jsonify({'content': content})
 
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         app.logger.error(f'Error loading template: {str(e)}')
         return jsonify({'error': f'Failed to load template: {str(e)}'}), 500
@@ -76,16 +135,24 @@ def get_template(template_path):
 @app.route('/api/open-file', methods=['POST'])
 def open_file():
     """Open a file from a local path"""
-    data = request.json
+    auth_error = _authorize_sensitive_endpoint()
+    if auth_error:
+        return auth_error
+
+    data = request.get_json(silent=True) or {}
     file_path = data.get('filePath')
     
     if not file_path:
         return jsonify({'error': 'No file path provided'}), 400
     
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        safe_path = _resolve_user_path(EDITABLE_FILES_DIR, file_path)
+
+        with open(safe_path, 'r', encoding='utf-8') as f:
             content = f.read()
         return jsonify({'content': content})
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -105,7 +172,11 @@ def get_html_variables():
 @app.route('/api/save-file', methods=['POST'])
 def save_file():
     """Save HTML content to a specific file path"""
-    data = request.json
+    auth_error = _authorize_sensitive_endpoint()
+    if auth_error:
+        return auth_error
+
+    data = request.get_json(silent=True) or {}
     file_path = data.get('filePath')
     content = data.get('content')
     
@@ -116,16 +187,17 @@ def save_file():
         return jsonify({'error': 'No content provided'}), 400
     
     try:
-        # Normalize the path to prevent directory traversal
-        file_path = os.path.normpath(os.path.abspath(file_path))
+        safe_path = _resolve_user_path(EDITABLE_FILES_DIR, file_path)
         
         # Create directories if they don't exist
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        os.makedirs(os.path.dirname(safe_path), exist_ok=True)
         
-        with open(file_path, 'w', encoding='utf-8') as f:
+        with open(safe_path, 'w', encoding='utf-8') as f:
             f.write(content)
         
-        return jsonify({'success': True, 'message': f'File saved to {file_path}'})
+        return jsonify({'success': True, 'message': 'File saved successfully'})
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
